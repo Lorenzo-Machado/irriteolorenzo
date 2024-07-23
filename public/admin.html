@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin - Play Audio</title>
+  <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+  <h1>Admin - Play Audio</h1>
+  <audio id="audio" controls></audio>
+
+  <script>
+    const socket = io();
+
+    socket.on('play-audio', (filePath) => {
+      const audio = document.getElementById('audio');
+      audio.src = filePath;
+      audio.play();
+    });
+  </script>
+</body>
+</html>
