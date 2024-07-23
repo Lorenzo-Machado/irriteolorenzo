@@ -2,7 +2,6 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const gtts = require('gtts');
 const path = require('path');
-const play = require('play-sound')();
 const http = require('http');
 const socketIo = require('socket.io');
 
@@ -13,14 +12,6 @@ const port = 3000;
 
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
-
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
-app.get('/admin', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'admin.html'));
-});
 
 app.post('/speak', (req, res) => {
   const text = req.body.text;

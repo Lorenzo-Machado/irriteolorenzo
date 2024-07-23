@@ -3,35 +3,45 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>irrite o lorenzo</title>
+  <title>Text to Speech</title>
+  <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
-  <h1>oque você escrever aqui tocará num speaker do lorenzo</h1>
-  <textarea id="text" rows="4" cols="50" placeholder="Type your text here..."></textarea>
-  <br>
-  <button onclick="sendText()">enviar</button>
-  <br>
-  <audio id="audio" controls></audio>
+  <h1>Text to Speech</h1>
+  <form id="text-form">
+    <textarea id="text" name="text" rows="4" cols="50"></textarea>
+    <br>
+    <button type="submit">Submit</button>
+  </form>
+  <audio id="audio" controls></audio> <!-- Adicionei o player de áudio aqui -->
 
   <script>
-    function sendText() {
+    document.getElementById('text-form').addEventListener('submit', function(event) {
+      event.preventDefault();
       const text = document.getElementById('text').value;
 
       fetch('/speak', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
+          'Content-Type': 'application/x-www-form-urlencoded'
         },
-        body: new URLSearchParams({ text: text }),
+        body: new URLSearchParams({
+          text: text
+        })
       })
       .then(response => response.text())
-      .then(data => {
-        const audio = document.getElementById('audio');
-        audio.src = data;
-        audio.play();
-      })
-      .catch(error => console.error('Error:', error));
-    }
+      .then(data => console.log('Success:', data))
+      .catch((error) => console.error('Error:', error));
+    });
+
+    // Configuração do WebSocket
+    const socket = io();
+
+    socket.on('play-audio', (filePath) => {
+      const audio = document.getElementById('audio');
+      audio.src = filePath;
+      audio.play();
+    });
   </script>
 </body>
 </html>
