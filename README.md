@@ -1,3 +1,6 @@
+Projeto inspirado (quase um plágio basicamente) no video  The Annoying Machine | Channel Update do Michael Reever => https://www.youtube.com/watch?v=WhtbyUMnalY
+
+
 Tutorial para noobs: para dar deploy nesse projeto (localmente ao menos) basta dar os seguintes comando
 (supondo que você já tenha o node instalado)
 >npm install gtts --save
