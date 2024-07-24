@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Banned</title>
+  <style>
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: linear-gradient(120deg, #f6d7e0, #f7f7a0, #d0f0c0, #a2c2e8);
+      background-size: 600% 600%;
+      animation: gradientShift 15s ease infinite;
+    }
+    .container {
+      text-align: center;
+      background: rgba(255, 255, 255, 0.9); /* Slightly transparent white background for container */
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+      max-width: 600px;
+      width: 100%;
+    }
+    img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 10px;
+    }
+    button {
+      border: none;
+      border-radius: 5px;
+      padding: 10px 15px;
+      color: #fff;
+      cursor: pointer;
+      font-size: 14px;
+      margin-top: 10px;
+      transition: background-color 0.3s ease;
+    }
+    button:hover {
+      background-color: #555;
+    }
+    #response {
+      font-size: 18px;
+      margin-top: 20px;
+    }
+    .banned {
+      color: red;
+    }
+    .unbanned {
+      color: green;
+    }
+    @keyframes gradientShift {
+      0% { background-position: 0% 0%; }
+      50% { background-position: 100% 100%; }
+      100% { background-position: 0% 0%; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Não gostei da sua msg, vc foi</h1>
+    <img src="https://i.imgur.com/RsW33Bu.jpeg" alt="Banned Image">
+    <button onclick="checkBan()">Eu continuo banido?</button>
+    <p id="response"></p>
+    <p id="countdown" style="display: none;"></p>
+  </div>
+  <script>
+    function checkBan() {
+      fetch('/check-ban')
+        .then(response => response.json())
+        .then(data => {
+          const responseElem = document.getElementById('response');
+          const countdownElem = document.getElementById('countdown');
+          if (data.banned) {
+            responseElem.textContent = 'Sim :(';
+            responseElem.classList.add('banned');
+            countdownElem.style.display = 'none'; // Hide countdown
+          } else {
+            responseElem.textContent = 'Não :)';
+            responseElem.classList.add('unbanned');
+            let countdown = 5;
+            countdownElem.style.display = 'block';
+            countdownElem.textContent = `Redirecionando para a página principal em ${countdown} segundos...`;
+            
+            const interval = setInterval(() => {
+              countdown--;
+              countdownElem.textContent = `Redirecionando para a página principal em ${countdown} segundos...`;
+              if (countdown <= 0) {
+                clearInterval(interval);
+                window.location.href = '/';
+              }
+            }, 1000);
+          }
+        });
+    }
+  </script>
+</body>
+</html>

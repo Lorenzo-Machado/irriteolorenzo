@@ -3,44 +3,119 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Text to Speech</title>
-  <script src="/socket.io/socket.io.js"></script>
+  <title>irrite o lorenzo</title>
+  <style>
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: linear-gradient(120deg, #f6d7e0, #f7f7a0, #d0f0c0, #a2c2e8);
+      background-size: 600% 600%;
+      animation: gradientShift 15s ease infinite;
+    }
+    .container {
+      text-align: center;
+      background: rgba(255, 255, 255, 0.9); /* Slightly transparent white background for container */
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+    }
+    #messageForm {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    textarea {
+      width: 300px;
+      height: 100px;
+      margin-bottom: 10px;
+      padding: 10px;
+      border-radius: 5px;
+      border: 1px solid #ddd;
+    }
+    button {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 5px;
+      background: linear-gradient(120deg, #f7a, #f77, #f7a);
+      color: white;
+      font-size: 16px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      animation: rgbGlow 3s linear infinite;
+    }
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    .confirmation {
+      margin-top: 10px;
+      font-size: 16px;
+      color: green;
+    }
+    @keyframes rgbGlow {
+      0% { box-shadow: 0 0 5px #f7a, 0 0 10px #f7a, 0 0 15px #f7a, 0 0 20px #f7a; }
+      50% { box-shadow: 0 0 5px #f77, 0 0 10px #f77, 0 0 15px #f77, 0 0 20px #f77; }
+      100% { box-shadow: 0 0 5px #f7a, 0 0 10px #f7a, 0 0 15px #f7a, 0 0 20px #f7a; }
+    }
+    @keyframes gradientShift {
+      0% { background-position: 0% 0%; }
+      50% { background-position: 100% 100%; }
+      100% { background-position: 0% 0%; }
+    }
+  </style>
 </head>
 <body>
-  <h1>Text to Speech</h1>
-  <form id="text-form">
-    <textarea id="text" name="text" rows="4" cols="50"></textarea>
-    <br>
-    <button type="submit">Submit</button>
-  </form>
-  <audio id="audio" controls></audio> <!-- Adicionei o player de áudio aqui -->
+  <div class="container">
+    <h1>td que você digitar aqui tocará em um speaker no quarto do lorenzo, lol</h1>
+    <form id="messageForm">
+      <textarea id="message" placeholder="Digite sua mensagem aqui..."></textarea>
+      <button type="submit" id="submitBtn">Enviar</button>
+      <div class="confirmation" id="confirmation"></div>
+    </form>
+  </div>
 
   <script>
-    document.getElementById('text-form').addEventListener('submit', function(event) {
-      event.preventDefault();
-      const text = document.getElementById('text').value;
+    document.getElementById('messageForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const message = document.getElementById('message').value;
+      const submitBtn = document.getElementById('submitBtn');
+      const confirmation = document.getElementById('confirmation');
+
+      submitBtn.disabled = true; // Disable the button
+      confirmation.textContent = 'Audio enviado';
 
       fetch('/speak', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded'
-        },
-        body: new URLSearchParams({
-          text: text
-        })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: message })
       })
-      .then(response => response.text())
-      .then(data => console.log('Success:', data))
-      .catch((error) => console.error('Error:', error));
-    });
+      .then(response => {
+        if (response.status === 403) {
+          window.location.href = '/banned.html'; // Redirect to banned page
+        } else {
+          return response.text();
+        }
+      })
+      .then(data => {
+        if (data) {
+          console.log(data);
+        }
+        setTimeout(() => {
+          submitBtn.disabled = false; // Enable the button after delay
+          confirmation.textContent = ''; // Clear the confirmation message
+        }, 3000); // 3 seconds delay
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        submitBtn.disabled = false;
+        confirmation.textContent = ''; // Clear the confirmation message in case of error
+      });
 
-    // Configuração do WebSocket
-    const socket = io();
-
-    socket.on('play-audio', (filePath) => {
-      const audio = document.getElementById('audio');
-      audio.src = filePath;
-      audio.play();
+      document.getElementById('message').value = ''; // Clear the textarea
     });
   </script>
 </body>
