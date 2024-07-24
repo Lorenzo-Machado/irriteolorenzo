@@ -18,7 +18,7 @@
     }
     .container {
       text-align: center;
-      background: rgba(255, 255, 255, 0.9); /* Slightly transparent white background for container */
+      background: rgba(255, 255, 255, 0.9); 
       padding: 20px;
       border-radius: 10px;
       box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
@@ -70,10 +70,10 @@
 </head>
 <body>
   <div class="container">
-    <h1>td que você digitar aqui tocará em um speaker no quarto do lorenzo, lol</h1>
+    <h1>td que você digitar aqui tocará em um speaker no quarto do lorenzo (eu te odeio)</h1>
     <form id="messageForm">
-      <textarea id="message" placeholder="Digite sua mensagem aqui..."></textarea>
-      <button type="submit" id="submitBtn">Enviar</button>
+      <textarea id="message" placeholder="digite sua mensagem aqui..."></textarea>
+      <button type="submit" id="submitBtn">me irritar</button>
       <div class="confirmation" id="confirmation"></div>
     </form>
   </div>
@@ -95,7 +95,7 @@
       })
       .then(response => {
         if (response.status === 403) {
-          window.location.href = '/banned.html'; // Redirect to banned page
+          window.location.href = '/banned.html'; // redirect pra pagina de banido
         } else {
           return response.text();
         }
@@ -105,9 +105,9 @@
           console.log(data);
         }
         setTimeout(() => {
-          submitBtn.disabled = false; // Enable the button after delay
-          confirmation.textContent = ''; // Clear the confirmation message
-        }, 3000); // 3 seconds delay
+          submitBtn.disabled = false; // libera o botao dps do delay
+          confirmation.textContent = '';
+        }, 3000); //delay de 3 segundos
       })
       .catch(error => {
         console.error('Error:', error);
@@ -115,7 +115,7 @@
         confirmation.textContent = ''; // Clear the confirmation message in case of error
       });
 
-      document.getElementById('message').value = ''; // Clear the textarea
+      document.getElementById('message').value = ''; // limpa a textbox 
     });
   </script>
 </body>

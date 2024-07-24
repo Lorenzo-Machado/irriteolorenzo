@@ -34,7 +34,7 @@
       border: none;
       border-radius: 5px;
       padding: 10px 15px;
-      color: #fff;
+      color: #040D12;
       cursor: pointer;
       font-size: 14px;
       margin-top: 10px;
@@ -64,7 +64,7 @@
   <div class="container">
     <h1>Não gostei da sua msg, vc foi</h1>
     <img src="https://i.imgur.com/RsW33Bu.jpeg" alt="Banned Image">
-    <button onclick="checkBan()">Eu continuo banido?</button>
+    <button onclick="checkBan()">eu continuo banido?</button>
     <p id="response"></p>
     <p id="countdown" style="display: none;"></p>
   </div>
@@ -76,19 +76,19 @@
           const responseElem = document.getElementById('response');
           const countdownElem = document.getElementById('countdown');
           if (data.banned) {
-            responseElem.textContent = 'Sim :(';
+            responseElem.textContent = 'sim :(';
             responseElem.classList.add('banned');
             countdownElem.style.display = 'none'; // Hide countdown
           } else {
-            responseElem.textContent = 'Não :)';
+            responseElem.textContent = 'não :)';
             responseElem.classList.add('unbanned');
             let countdown = 5;
             countdownElem.style.display = 'block';
-            countdownElem.textContent = `Redirecionando para a página principal em ${countdown} segundos...`;
+            countdownElem.textContent = `redirecionando pra página principal em ${countdown} segundos...`;
             
             const interval = setInterval(() => {
               countdown--;
-              countdownElem.textContent = `Redirecionando para a página principal em ${countdown} segundos...`;
+              countdownElem.textContent = `redirecionando pra página principal em ${countdown} segundos...`;
               if (countdown <= 0) {
                 clearInterval(interval);
                 window.location.href = '/';
