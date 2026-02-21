@@ -70,7 +70,7 @@
 </head>
 <body>
   <div class="container">
-    <h1>td que você digitar aqui tocará em um speaker no quarto do lorenzo (eu te odeio)</h1>
+    <h1>Oque você digitar aqui tocará em um speaker no meu quarto (eu te odeio)</h1>
     <form id="messageForm">
       <textarea id="message" placeholder="digite sua mensagem aqui..."></textarea>
       <button type="submit" id="submitBtn">me irritar</button>
@@ -86,7 +86,7 @@
       const confirmation = document.getElementById('confirmation');
 
       submitBtn.disabled = true; // Disable the button
-      confirmation.textContent = 'Audio enviado';
+      confirmation.textContent = 'você acabou de gastar 8bytes de internet com bobagem';
 
       fetch('/speak', {
         method: 'POST',
