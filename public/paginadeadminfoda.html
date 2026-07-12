@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>pagina foda de admin</title>
+  <title>admin</title>
   <style>
     body {
         display: flex;
@@ -18,7 +18,7 @@
     }
     .container {
         text-align: center;
-        background: rgba(255, 255, 255, 0.9); /* Slightly transparent white background for container */
+        background: rgba(255, 255, 255, 0.9);
         padding: 20px;
         border-radius: 10px;
         box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
@@ -26,11 +26,10 @@
         width: 100%;
     }
     #messageList {
-        overflow-y: auto; /* Habilita a rolagem vertical */
-        height: 400px; /* Defina a altura desejada para a caixa de mensagens */
-        scroll-behavior: smooth; /* Suaviza a rolagem quando novas mensagens são adicionadas */
+        overflow-y: auto;
+        height: 400px;
         display: flex;
-        flex-direction: column-reverse; /* Inverte a ordem dos elementos para que o mais recente fique no topo */
+        flex-direction: column;
     }
     #messageList li {
         background: #ffffff;
@@ -47,10 +46,18 @@
         font-size: 14px;
         color: #333;
         margin-bottom: 10px;
+        text-align: left;
+        word-break: break-all;
     }
     .message-actions {
         display: flex;
         justify-content: flex-end;
+    }
+    .pw-input {
+      margin-bottom: 10px;
+      padding: 5px;
+      border: 1px solid #ddd;
+      border-radius: 3px;
     }
     button {
         border: none;
@@ -60,37 +67,22 @@
         cursor: pointer;
         font-size: 14px;
         margin-left: 10px;
-        transition: background-color 0.3s ease;
     }
-    .ban-button {
-        background-color: #e74c3c; /* Red for ban button */
-    }
-    .ban-button:hover {
-        background-color: #c0392b;
-    }
-    .unban-button {
-        background-color: #2ecc71; /* Green for unban button */
-    }
-    .unban-button:hover {
-        background-color: #27ae60;
-    }
+    .ban-button { background-color: #e74c3c; }
+    .ban-button:hover { background-color: #c0392b; }
+    .unban-button { background-color: #2ecc71; }
+    .unban-button:hover { background-color: #27ae60; }
     @keyframes gradientShift {
         0% { background-position: 0% 0%; }
         50% { background-position: 100% 100%; }
         100% { background-position: 0% 0%; }
     }
-    #messageList {
-    overflow-y: auto; /* Habilita a rolagem vertical */
-    height: 400px; /* Defina a altura desejada para a caixa de mensagens */
-    display: flex;
-    flex-direction: column; /* Mantém a ordem normal das mensagens */
-    justify-content: flex-start; /* Começa a rolagem no topo */
-}
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>pagina mto foda só pra admin foda</h1>
+    <h1>admin</h1>
+    <input type="password" id="pw" class="pw-input" placeholder="senha">
     <ul id="messageList"></ul>
   </div>
   <script>
@@ -100,95 +92,75 @@
   
     function fetchMessages() {
       fetch('/messages')
-        .then(response => response.json())
+        .then(r => r.json())
         .then(data => {
-          const messageList = document.getElementById('messageList');
-          messageList.innerHTML = '';
-  
+          const list = document.getElementById('messageList');
+          list.innerHTML = '';
           data.forEach(msg => {
             const li = document.createElement('li');
-            li.innerHTML = `
-              <div class="message-text">
-                ${msg.timestamp} - ${msg.ip} - ${msg.text}
-              </div>
-              <div class="message-actions">
-                <button class="ban-button" onclick="banIp('${msg.ip}')">Banir</button>
-                <button class="unban-button" onclick="unbanIp('${msg.ip}')">Desbanir</button>
-              </div>
-            `;
-            messageList.appendChild(li);
+            const textDiv = document.createElement('div');
+            textDiv.className = 'message-text';
+            textDiv.textContent = msg.timestamp + ' - ' + msg.ip + ' - ' + msg.text;
+            li.appendChild(textDiv);
+            const actions = document.createElement('div');
+            actions.className = 'message-actions';
+            const banBtn = document.createElement('button');
+            banBtn.className = 'ban-button';
+            banBtn.textContent = 'Banir';
+            banBtn.onclick = () => banIp(msg.ip);
+            const unbanBtn = document.createElement('button');
+            unbanBtn.className = 'unban-button';
+            unbanBtn.textContent = 'Desbanir';
+            unbanBtn.onclick = () => unbanIp(msg.ip);
+            actions.appendChild(banBtn);
+            actions.appendChild(unbanBtn);
+            li.appendChild(actions);
+            list.appendChild(li);
           });
-  
-          // Ensure scroll to the bottom
-          messageList.scrollTop = messageList.scrollHeight;
-  
-          // Queue up new messages for playback
-          const newMessages = data.slice(data.length - 1); // Get the latest messages
-          newMessages.forEach(msg => {
-            if (msg.fileName !== lastPlayedMessage) {
+          list.scrollTop = list.scrollHeight;
+          const newMsgs = data.slice(-1);
+          newMsgs.forEach(msg => {
+            if (msg.fileName && msg.fileName !== lastPlayedMessage) {
               audioQueue.push(msg.fileName);
-              lastPlayedMessage = msg.fileName; // Update lastPlayedMessage to prevent reprocessing
+              lastPlayedMessage = msg.fileName;
             }
           });
-  
-          // Start playing if not already playing
-          if (!isPlaying && audioQueue.length > 0) {
-            playNextAudio();
-          }
+          if (!isPlaying && audioQueue.length > 0) playNextAudio();
         })
-        .catch(error => console.error('Error loading messages:', error));
+        .catch(e => console.error(e));
     }
-  
+
     function playNextAudio() {
-      if (audioQueue.length > 0) {
-        isPlaying = true;
-        const fileName = audioQueue.shift(); // Get the next audio file
-  
-        const audio = new Audio(`/${fileName}`);
-        audio.oncanplaythrough = () => {
-          audio.play().catch(error => {
-            console.error('Error playing audio:', error);
-          });
-        };
-        audio.onended = () => {
-          isPlaying = false;
-          playNextAudio(); // Play the next audio in the queue
-        };
-      }
+      if (audioQueue.length === 0) return;
+      isPlaying = true;
+      const name = audioQueue.shift();
+      const audio = new Audio('/' + name);
+      audio.oncanplaythrough = () => audio.play().catch(() => {});
+      audio.onended = () => {
+        isPlaying = false;
+        playNextAudio();
+      };
     }
   
+    function getPw() { return document.getElementById('pw').value || 'irriteoadmin'; }
+
     function banIp(ip) {
       fetch('/ban', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ ip })
-      })
-        .then(response => response.text())
-        .then(data => {
-          alert(data);
-          fetchMessages();
-        });
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ip, password: getPw() })
+      }).then(r => r.text()).then(d => { alert(d); fetchMessages(); });
     }
   
     function unbanIp(ip) {
       fetch('/unban', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ ip })
-      })
-        .then(response => response.text())
-        .then(data => {
-          alert(data);
-          fetchMessages();
-        });
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ip, password: getPw() })
+      }).then(r => r.text()).then(d => { alert(d); fetchMessages(); });
     }
   
-    setInterval(fetchMessages, 3000); // Fetch messages every 3 seconds
+    setInterval(fetchMessages, 3000);
   </script>
-  
 </body>
 </html>

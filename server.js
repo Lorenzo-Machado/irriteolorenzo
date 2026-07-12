@@ -2,141 +2,168 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const gtts = require('gtts');
+const crypto = require('crypto');
+
 const app = express();
 const port = 3030;
+const ADMIN_PASSWORD = 'irriteoadmin'; // mude isso depois
 
-app.use(express.static('public')); 
-app.use(express.urlencoded({ extended: true }));
-app.use(express.json()); // Parse JSON bodies
+app.use(express.static('public'));
+app.use(express.json());
+app.use(express.urlencoded({ extended: false }));
 
 const messagesFilePath = path.join(__dirname, 'messages.json');
 const bannedIpsFilePath = path.join(__dirname, 'banned_ips.json');
 
-let messages = loadMessages(); // carrega as mensagens do json 
-let bannedIps = loadBannedIps(); // carrega os Ip do json de ip banidos
+let messages = [];
+let bannedIps = new Set();
+let rateLimit = new Map();
 
-function loadMessages() {
+function loadJson(filepath, fallback) {
   try {
-    if (!fs.existsSync(messagesFilePath)) {
-      fs.writeFileSync(messagesFilePath, JSON.stringify([])); // cria uym json pras mensagens caso n tenha um
+    if (!fs.existsSync(filepath)) {
+      fs.writeFileSync(filepath, JSON.stringify(fallback));
+      return fallback;
     }
-    const data = fs.readFileSync(messagesFilePath, 'utf8');
-    return JSON.parse(data);
-  } catch (err) {
-    console.error('erro carregando mensagens:', err);
-    return [];
+    return JSON.parse(fs.readFileSync(filepath, 'utf8'));
+  } catch (e) {
+    console.error('erro carregando', filepath, e);
+    return fallback;
   }
 }
 
 function saveMessages() {
-  try {
-    fs.writeFileSync(messagesFilePath, JSON.stringify(messages, null, 2));
-  } catch (err) {
-    console.error('erro salvando mensagens:', err);
-  }
-}
-
-function loadBannedIps() {
-  try {
-    if (!fs.existsSync(bannedIpsFilePath)) {
-      fs.writeFileSync(bannedIpsFilePath, JSON.stringify([])); // cria um json de ip banido caso n tenha um
-    }
-    const data = fs.readFileSync(bannedIpsFilePath, 'utf8');
-    return new Set(JSON.parse(data)); // Use a Set to store banned IPs
-  } catch (err) {
-    console.error('erro carregando IPs banidos:', err);
-    return new Set();
-  }
+  try { fs.writeFileSync(messagesFilePath, JSON.stringify(messages, null, 2)); }
+  catch (e) { console.error('erro salvando mensagens:', e); }
 }
 
 function saveBannedIps() {
-  try {
-    fs.writeFileSync(bannedIpsFilePath, JSON.stringify([...bannedIps])); // converte Set pra Array antes de salvar
-  } catch (err) {
-    console.error('Erro salvando IPs banidos:', err);
-  }
+  try { fs.writeFileSync(bannedIpsFilePath, JSON.stringify([...bannedIps])); }
+  catch (e) { console.error('erro salvando IPs banidos:', e); }
 }
 
+messages = loadJson(messagesFilePath, []);
+bannedIps = new Set(loadJson(bannedIpsFilePath, []));
+
+function sanitize(str) {
+  if (!str) return '';
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;').replace(/'/g, '&#x27;');
+}
+
+function getClientIp(req) {
+  const forwarded = req.headers['x-forwarded-for'];
+  if (forwarded) {
+    // Use only the first IP (original client)
+    return forwarded.split(',')[0].trim();
+  }
+  const addr = req.socket.remoteAddress;
+  if (addr && addr.startsWith('::ffff:')) return addr.substring(7);
+  return addr || 'unknown';
+}
+
+function checkRateLimit(ip) {
+  const now = Date.now();
+  const windowMs = 5000;
+  const maxReqs = 3;
+  if (!rateLimit.has(ip)) {
+    rateLimit.set(ip, []);
+  }
+  const times = rateLimit.get(ip).filter(t => now - t < windowMs);
+  if (times.length >= maxReqs) return false;
+  times.push(now);
+  rateLimit.set(ip, times);
+  return true;
+}
+
+// Clean up stale audio files on startup
 app.post('/speak', (req, res) => {
   const text = req.body.text;
-  const clientIp = req.headers['x-forwarded-for'] || req.connection.remoteAddress; // pega o ip do usuario
+  const clientIp = getClientIp(req);
 
   if (bannedIps.has(clientIp)) {
-    return res.status(403).sendFile(path.join(__dirname, 'public', 'banned.html')); // redireciona pra pagina de banido
+    return res.status(403).sendFile(path.join(__dirname, 'public', 'banned.html'));
   }
 
-  if (text) {
-    const timestamp = new Date().toISOString().replace(/:/g, '-');
-    const fileName = `audio_${timestamp}.mp3`; // cria um arquivo com nome unico com a data 
-    const filePath = path.join(__dirname, 'public', fileName);
-
-    const gttsInstance = new gtts(text, 'pt'); // aq tu muda a lingua dessa porra
-
-    gttsInstance.save(filePath, (err) => {
-      if (err) {
-        console.error('Erro:', err);
-        return res.status(500).send('Eeo gerando áudio');
-      }
-
-      const message = { text, timestamp, fileName, ip: clientIp };
-      messages.push(message); // salva as msg com o conteudo da msg, data, nome do arquivo e ip  
-      saveMessages(); // salva as msg no arquivo
-
-      // log de mensagem no server
-      console.log(`Data: ${timestamp}, IP: ${clientIp}, Mensagem: ${text}`);
-
-      // deleta o audio antigo q já foi tocado
-      if (messages.length > 1) {
-        const oldMessage = messages[messages.length - 2];
-        const oldFilePath = path.join(__dirname, 'public', oldMessage.fileName);
-        fs.unlink(oldFilePath, (err) => {
-          if (err) {
-            console.error('erro deletando o arquivo véio paia:', err);
-          } else {
-            console.log(`arquivo véio paia deletado: ${oldMessage.fileName}`);
-          }
-        });
-      }
-
-      res.send('audio gerado com sucesso');
-    });
-  } else {
-    res.status(400).send('nenhum texto fornecido');
+  if (!text || text.trim().length === 0) {
+    return res.status(400).send('texto vazio');
   }
+
+  if (text.length > 500) {
+    return res.status(413).send('texto muito longo (max 500 chars)');
+  }
+
+  if (!checkRateLimit(clientIp)) {
+    return res.status(429).send('calma la, espera 5s entre mensagens');
+  }
+
+  const timestamp = new Date().toISOString();
+  const safeName = timestamp.replace(/[:.]/g, '-');
+  const fileName = `audio_${safeName}.mp3`;
+  const filePath = path.join(__dirname, 'public', fileName);
+
+  const tts = new gtts(text, 'pt');
+  tts.save(filePath, (err) => {
+    if (err) {
+      console.error('Erro TTS:', err);
+      return res.status(500).send('erro gerando audio');
+    }
+
+    const entry = { text, timestamp, fileName, ip: clientIp };
+    messages.push(entry);
+    saveMessages();
+
+    console.log(`msg de ${clientIp}: ${text.substring(0, 60)}`);
+
+    // Keep only last 50 messages, delete old audio files
+    while (messages.length > 50) {
+      const old = messages.shift();
+      const oldPath = path.join(__dirname, 'public', old.fileName);
+      fs.unlink(oldPath, () => {});
+    }
+    saveMessages();
+
+    res.send('ok');
+  });
 });
 
 app.get('/messages', (req, res) => {
-  res.json(messages); // da uma mesage .json
+  // Return sanitized data for the admin page
+  const safe = messages.map(m => ({
+    text: sanitize(m.text),
+    ip: sanitize(m.ip),
+    timestamp: m.timestamp,
+    fileName: m.fileName
+  }));
+  res.json(safe);
 });
 
 app.post('/ban', (req, res) => {
-  const { ip } = req.body;
-  if (ip) {
-    bannedIps.add(ip);
-    saveBannedIps(); // salva o ip banido num json
-    res.send(`o IP ${ip} foi banido com sucesso`);
-  } else {
-    res.status(400).send('nenhum IP fornecido');
+  const { ip, password } = req.body;
+  if (password !== ADMIN_PASSWORD) {
+    return res.status(403).send('senha errada');
   }
+  if (!ip) return res.status(400).send('ip necessario');
+  bannedIps.add(ip);
+  saveBannedIps();
+  res.send(`ip ${ip} banido`);
 });
 
 app.post('/unban', (req, res) => {
-  const { ip } = req.body;
-  if (ip) {
-    bannedIps.delete(ip);
-    saveBannedIps(); // ip salvo em um arquivo goré
-    res.send(`o IP ${ip} foi desbanido com sucesso`);
-  } else {
-    res.status(400).send('nenhum IP fornecido');
+  const { ip, password } = req.body;
+  if (password !== ADMIN_PASSWORD) {
+    return res.status(403).send('senha errada');
   }
+  if (!ip) return res.status(400).send('ip necessario');
+  bannedIps.delete(ip);
+  saveBannedIps();
+  res.send(`ip ${ip} desbanido`);
 });
 
 app.get('/check-ban', (req, res) => {
-  const clientIp = req.headers['x-forwarded-for'] || req.connection.remoteAddress; // pega o ip do usuario
-  const banned = bannedIps.has(clientIp);
-  res.json({ banned });
+  res.json({ banned: bannedIps.has(getClientIp(req)) });
 });
 
 app.listen(port, () => {
-  console.log(`servidor rodando em http://localhost:${port}/`);
+  console.log(`irriteolorenzo rodando em http://localhost:${port}/`);
 });
